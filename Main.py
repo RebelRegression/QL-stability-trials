@@ -10,13 +10,14 @@ import pandas as pd
 import datetime
 
 """1. Hyperparameters for Run"""
-
-gammas = [0.01]
+variable_parameter = 'gamma'
+gamma = [0.01]
 for x in range(10,1000):
     if x % 50 == 0:
-        gammas.append(x/1000)
-gammas.append(1)
-
+        gamma.append(x/1000)
+gamma.append(1)
+subdirectory_list = gamma
+variable_parameter_list = gamma
 
 episodes = 1500
 max_steps = 200
@@ -30,33 +31,31 @@ epsilon = 0.9
 epsilon_min = 0.05
 epsilon_decay_rate = 0.01
 
-training_folder = ('Run3-Taxiv3-gammas') #Folder where all data will be stored
-print(gammas)
+training_folder = ('Run2-Taxiv3-gamma') #Folder where all data will be stored
+print(variable_parameter_list)
 
 """
 3. Training of Agents
 """
 seeds = np.load('seeds.npy')
-make_file_structure(training_folder, gammas, alpha, agents_per_setting, env_name, gammas, epsilon, epsilon_decay_rate, epsilon_min, episodes, max_steps)
+make_file_structure(training_folder, subdirectory_list, variable_parameter, alpha, agents_per_setting, env_name, gamma, epsilon, epsilon_decay_rate, epsilon_min, episodes, max_steps)
 
-for gamma in gammas:
+for parameter in variable_parameter_list:
     #making new folder that will hold all the agents data files
-    print(f'-----------Training GAMMA: {alpha}-----------')
+    print(f'-----------Training {variable_parameter}: {parameter}-----------')
     for n_agent in range (1,agents_per_setting+1):
-        Agent = QLAgent(env, alpha, gamma, epsilon, epsilon_decay_rate, epsilon_min, episodes, max_steps)
+        Agent = QLAgent(env, alpha, parameter, epsilon, epsilon_decay_rate, epsilon_min, episodes, max_steps)
         return_list, reward_per_step = Agent.train()
-        np.save(f'{training_folder}/agents_for_setting_{alpha}/agent_Q-Table_{n_agent}',Agent.Q)
-        np.save(f'{training_folder}/agents_for_setting_{alpha}/agent_reward_per_step_{n_agent}', reward_per_step)
+        np.save(f'{training_folder}/agents_for_setting_{parameter}/agent_Q-Table_{n_agent}',Agent.Q)
+        np.save(f'{training_folder}/agents_for_setting_{parameter}/agent_reward_per_step_{n_agent}', reward_per_step)
 
-#Storing Date and Time of final episode to keep track of duration of one training episode and ensure completion
-with open(f"{training_folder}/config.txt", "a") as file:
-    file.write(f'end_of_trainingrun: {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
-
-# Evaluation
-for gamma in gammas:
-    for n_agent in range (1,agents_per_setting+1):
         Return_array = np.array([])
         Return_array = Return_array[:,np.newaxis]
         for seed in seeds:
             Return_array = np.vstack((Return_array,Agent.evaluate(seed=seed)))
-        np.save(f'{training_folder}/agents_for_setting_{alpha}/agent_evaluation_return_{n_agent}', Return_array)
+        np.save(f'{training_folder}/agents_for_setting_{parameter}/agent_evaluation_return_{n_agent}', Return_array)
+
+
+#Storing Date and Time of final episode to keep track of duration of one training episode and ensure completion
+with open(f"{training_folder}/config.txt", "a") as file:
+    file.write(f'end_of_trainingrun; {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')

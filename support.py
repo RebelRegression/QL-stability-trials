@@ -101,7 +101,7 @@ class QLAgent:
         
         return Return
     
-    def get_action_probabilities_as_array(self):
+    def get_action_probabilities_as_array_from_agent(self):
         '''
         Returns the action probabilities from any given QL Agent, as an array. Uses the current Q-Table as input.
         '''
@@ -118,14 +118,31 @@ class QLAgent:
         array = np.array(action_probabiliites)  
 
         return array
+
+def get_action_probabilities_as_array(Q_table):
+    '''
+    Returns the action probabilities from any given QL Agent, as an array. Uses the current Q-Table as input.
+    '''
+    action_probabiliites = []
+
+    for state in Q_table:
+
+        # 1. calulate probabilites
+        probabilities = np.exp(state)/sum(np.exp(state))
+        # 2. calculate entropy with base6 for 6 actions
+        action_probabiliites.append(probabilities)
+
+    array = np.array(action_probabiliites)  
+
+    return array
     
-def make_file_structure(training_folder, subdirectory_list, alpha, agents_per_setting, env_name, gammas, epsilon, epsilon_decay_rate, epsilon_min, episodes, max_steps):
+def make_file_structure(training_folder, subdirectory_list, variable_parameter,alpha, agents_per_setting, env_name, gamma, epsilon, epsilon_decay_rate, epsilon_min, episodes, max_steps):
     '''
     takes the parameters and creates a full subdirectory that is filled with the training data.
     '''
     
     os.mkdir(f'{training_folder}')
-    make_config_txt(training_folder, alpha, agents_per_setting, env_name, gammas, epsilon, epsilon_decay_rate, epsilon_min, episodes, max_steps)
+    make_config_txt(training_folder, variable_parameter, alpha, agents_per_setting, env_name, gamma, epsilon, epsilon_decay_rate, epsilon_min, episodes, max_steps)
     for variable in subdirectory_list:
         os.mkdir(f'{training_folder}/agents_for_setting_{variable}')
     
@@ -135,13 +152,14 @@ def make_file_structure(training_folder, subdirectory_list, alpha, agents_per_se
     print('Training folder created\n')
 
     
-def make_config_txt(directory, alphas, n_agents, env, gamma, epsilon, epsilon_decay_rate, epsilon_min, episodes, max_steps):
+def make_config_txt(directory, variable_parameter, alphas, n_agents, env, gamma, epsilon, epsilon_decay_rate, epsilon_min, episodes, max_steps):
     filename = 'config.txt'
     config = {
-        'alphas': alphas,
+        'variable_parameter': variable_parameter,
+        'alpha': alphas,
         'n_agents': n_agents,
         'env': env,
-        'discount_factor': gamma,
+        'gamma': gamma,
         'epsilon': epsilon,
         'epsilon_decay_rate': epsilon_decay_rate,
         'epsilon_min': epsilon_min,
@@ -153,7 +171,40 @@ def make_config_txt(directory, alphas, n_agents, env, gamma, epsilon, epsilon_de
     # Open the file in write mode and write the dictionary
     with open(f"{directory}/{filename}", "w") as file:
         for key, value in config.items():
-            file.write(f"{key}: {value}\n")
+            file.write(f"{key}; {value}\n")
+
+def read_config_from_txt_file(path_to_config_txt):
+
+    # Initialize an empty dictionary
+    data = {}
+
+    # Open the text file and read its contents
+    with open(path_to_config_txt, 'r') as file:
+        # Iterate over each line in the file
+        for line in file:
+            # Split the line by the ':' delimiter
+            key, value = line.strip().split(';')
+            
+            # Remove leading/trailing spaces from the key and value
+            key = key.strip()
+            value = value.strip()
+            
+            # Convert the value to an appropriate data type if needed
+            if value.startswith('[') and value.endswith(']'):
+                # If the value is a list, convert it to a Python list
+                value = eval(value)
+            elif value.isdigit():
+                # If the value is a number represented as a string, convert it to an integer
+                value = int(value)
+            elif '.' in value and all(part.isdigit() for part in value.split('.', 1)):
+                # If the value is a float represented as a string, convert it to a float
+                value = float(value)
+            
+            # Store the key-value pair in the dictionary
+            data[key] = value
+
+    # Print the dictionary
+    return data
 
 
 

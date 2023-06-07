@@ -3,51 +3,38 @@ import scipy
 import gym
 import matplotlib.pyplot as plt
 import os
+from support import *
+
+
+training_folder = ('Run4-Taxiv3-alphas')
+config_dictionary = read_config_from_txt_file(f'{training_folder}/config.txt')
+
+
+variable_parameter = config_dictionary.get('variable_parameter')
+variable_parameter_list = config_dictionary.get(variable_parameter)
 
 
 
-alphas = [0.01]
-for x in range(10,1000):
-    if x % 50 == 0:
-        alphas.append(x/1000)
-alphas.append(1)
+print(variable_parameter_list)
 
 
-episodes = 3000
-max_steps = 200
-agents_per_setting = 50
-
-
-env = gym.make('Taxi-v3')
-env_name = 'Taxi-v3'
-gamma = 0.9
-epsilon = 0.9
-epsilon_min = 0.05
-epsilon_decay_rate = 0.01
-
-training_folder = ('Run3-Taxiv3-gammas') #Folder where all data will be stored
-print(alphas)
-
-
-alphas = [0.01]
-for x in range(10,1000):
-    if x % 50 == 0:
-        alphas.append(x/1000)
-alphas.append(1)
 
 #making directories where figures will be saved
 try: 
     os.mkdir(f'{training_folder}/figures')
+except:
+    pass
+try:
     os.mkdir(f'{training_folder}/figures/entropy')
 except:
     pass
 
 
-for alpha in alphas: 
+for variable_parameter_value in variable_parameter_list: 
     agent_entropy_array = np.empty([500,0])
 
-    for n_agent in range(1,agents_per_setting +1):
-        Q_table = np.load(f'{training_folder}/agents_for_alpha_{alpha}/agent_Q-Table_{n_agent}.npy')
+    for n_agent in range(1,config_dictionary.get('n_agents') +1):
+        Q_table = np.load(f'{training_folder}/agents_for_setting_{variable_parameter_value}/agent_Q-Table_{n_agent}.npy')
         state_entropy = []
 
         for state in Q_table:
@@ -62,11 +49,14 @@ for alpha in alphas:
         state_entropy = state_entropy[:,np.newaxis]
         agent_entropy_array = np.hstack((agent_entropy_array, state_entropy))
 
+    np.save(f'{training_folder}/agents_for_setting_{variable_parameter_value}/entropy_array_{variable_parameter_value}.npy', agent_entropy_array)
     plt.imshow(agent_entropy_array, cmap='hot', interpolation='nearest')
-    plt.title(f'Agent Entropy for Alpha: {alpha}')
+    plt.title(label=f'Agent Entropy for {config_dictionary.get("variable_parameter")}: {variable_parameter_value}',pad=+10)
     plt.ylabel('State')
-    plt.xlabel('Agent Number')
-    plt.savefig(f'{training_folder}/figures/entropy/entropy_heatmap_alpha{alpha}.jpg', dpi=2000)
+    plt.xlabel('Agent-ID')
+    plt.colorbar(shrink=0.6, anchor=(0.0, 0.0))
+    plt.savefig(f'{training_folder}/figures/entropy/entropy_heatmap_alpha{variable_parameter_value}.jpg', dpi=2000, bbox_inches='tight')
+    plt.clf()
 
 #Code for splitting figures up in single parts; PROBLEM: The color scale is all messed up from image to image because they are not identical (e.g: 0 is white and in the next image its red)
 """for alpha in alphas:

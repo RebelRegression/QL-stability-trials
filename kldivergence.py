@@ -3,26 +3,18 @@ import scipy
 import gym
 import matplotlib.pyplot as plt
 import os
+import tqdm
+from support import *
 
-alphas = [0.01]
-for x in range(10,1000):
-    if x % 50 == 0:
-        alphas.append(x/1000)
-alphas.append(1)
 
-episodes = 3000
-max_steps = 200
-agents_per_setting = 50
 
-env = gym.make('Taxi-v3')
-env_name = 'Taxi-v3'
-gamma = 0.9
-epsilon = 0.9
-epsilon_min = 0.05
-epsilon_decay_rate = 0.01
+training_folder = ('Run4-Taxiv3-alphas')
+config_dictionary = read_config_from_txt_file(f'{training_folder}/config.txt')
 
-training_folder = ('Run2-Taxiv3-alphas') #Folder where all data will be stored
-print(alphas)
+
+variable_parameter = config_dictionary.get('variable_parameter')
+variable_parameter_list = config_dictionary.get(variable_parameter)
+
 
 try: 
     os.mkdir(f'{training_folder}/figures')
@@ -34,41 +26,45 @@ except:
     pass
 
 
-for alpha in alphas: 
-    try:
-        os.mkdir(f'{training_folder}/agents_for_alpha_{alpha}/temp')
-    except:
-        pass
-    agent_entropy_array = np.empty([500,0])
+#Erstellen von arrays der action probabilites für alle trainierten Agenten
+for variable_parameter_value in variable_parameter_list:
+    for n_agent in range(1, config_dictionary.get('n_agents')+1):
+        Q_table = np.load(f'{training_folder}/agents_for_setting_{variable_parameter_value}/agent_Q-Table_{n_agent}.npy')
+        action_probabilities_array = get_action_probabilities_as_array(Q_table)
+        np.save(f'{training_folder}/agents_for_setting_{variable_parameter_value}/agent_action_probabilities_{n_agent}.npy', action_probabilities_array)
+    print(f'done for {variable_parameter_value}')
 
-    for n_agent in range(1,agents_per_setting +1):
-        Q_table = np.load(f'{training_folder}/agents_for_alpha_{alpha}/agent_Q-Table_{n_agent}.npy')
-        action_probabiliites = []
+#Berechnen der KL Divergenz von jedem Agenten pro Setting zu jedem anderen Agenten pro Setting 
 
-        for state in Q_table:
+for variable_parameter_value in variable_parameter_list:
 
-            # 1. calulate probabilites
-            probabilities = np.exp(state)/sum(np.exp(state))
-            # 2. calculate entropy with base6 for 6 actions
-            action_probabiliites.append(probabilities)
+    agents_kl_divergence = np.empty([0,config_dictionary.get('n_agents')])
+    for agent_x in range(1, config_dictionary.get('n_agents')+1):
+        agent_x_probabilites = np.load(f'{training_folder}/agents_for_setting_{variable_parameter_value}/agent_action_probabilities_{agent_x}.npy')
+        agent_x_kl_divergence_2_all_other_agents = []
+        
+        for agent_y in range(1, config_dictionary.get("n_agents")+1):
+            #pass wenn die AgentID gleich ist, um nicht den gleichen Agenten zueinander zu vergleichen
 
 
-        array = np.array(action_probabiliites)  
-        np.save(f'{training_folder}/agents_for_alpha_{alpha}/temp/action_probabilites_{n_agent}', array)
+            agent_y_probabilites = np.load(f'{training_folder}/agents_for_setting_{variable_parameter_value}/agent_action_probabilities_{agent_y}.npy')
 
-# Vergleichen aller Action probabilites eines jeden Agenten mit denen von allen anderen Agenten 
-for alpha in alphas:
-    for agent_x in range(1,agents_per_setting +1):
-        for agent_y in range(1,agent_entropy_array+1):
+            num_states = len(agent_x_probabilites)
+            current = [] #an array that contains the kl divergence between all states of two agents
 
-            if agent_x == agent_y: # Damit nicht die gleichen Action prob. distributions miteinander verglichen werden
-                pass 
+            for state in range(num_states):
+                current.append(scipy.stats.entropy(agent_x_probabilites[state], agent_y_probabilites[state], base=6))
+            agent_x_kl_divergence_2_all_other_agents = np.append(agent_x_kl_divergence_2_all_other_agents, [np.mean(current)])
+            
 
-            action_probabiliites_agent_x = np.load(f'{training_folder}/agents_for_alpha_{alpha}/temp/action_probabilites_{agent_x}')
-            action_probabiliites_agent_y = np.load(f'{training_folder}/agents_for_alpha_{alpha}/temp/action_probabilites_{agent_y}')
-
-    """plt.imshow(agent_entropy_array, cmap='hot', interpolation='nearest')
-    plt.title(f'Agent Entropy for Alpha: {alpha}')
-    plt.ylabel('State')
-    plt.xlabel('Agent Number')
-    plt.savefig(f'{training_folder}/figures/entropy/entropy_heatmap_alpha{alpha}.jpg', dpi=2000)"""
+        #speichert den Durchschnitt der KL-Divergenz zwischen zwei Agenten
+        agents_kl_divergence = np.vstack((agents_kl_divergence, agent_x_kl_divergence_2_all_other_agents))
+             
+    plt.imshow(agents_kl_divergence, cmap='hot', interpolation='nearest')
+    plt.title(label=f'average KL-Divergence for {config_dictionary.get("variable_parameter")}: {variable_parameter_value}', pad=+10)
+    plt.ylabel('Agent-Y')
+    plt.xlabel('Agent-X')
+    plt.colorbar(shrink=0.6, anchor=(0.0, 0.0))
+    plt.savefig(f'{training_folder}/figures/kl-divergence/entropy_heatmap_gamma{variable_parameter_value}.jpg', dpi=2000, bbox_inches='tight')
+    plt.clf()
+    print('Setting {:.2f} done'.format(variable_parameter_value))
