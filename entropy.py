@@ -5,19 +5,11 @@ import matplotlib.pyplot as plt
 import os
 from support import *
 
-
-training_folder = ('Run4-Taxiv3-alphas')
+training_folder = ('Run6-Taxiv3-alpha-n_50')
 config_dictionary = read_config_from_txt_file(f'{training_folder}/config.txt')
-
 
 variable_parameter = config_dictionary.get('variable_parameter')
 variable_parameter_list = config_dictionary.get(variable_parameter)
-
-
-
-print(variable_parameter_list)
-
-
 
 #making directories where figures will be saved
 try: 
@@ -28,7 +20,6 @@ try:
     os.mkdir(f'{training_folder}/figures/entropy')
 except:
     pass
-
 
 for variable_parameter_value in variable_parameter_list: 
     agent_entropy_array = np.empty([500,0])
@@ -57,6 +48,7 @@ for variable_parameter_value in variable_parameter_list:
     plt.colorbar(shrink=0.6, anchor=(0.0, 0.0))
     plt.savefig(f'{training_folder}/figures/entropy/entropy_heatmap_alpha{variable_parameter_value}.jpg', dpi=2000, bbox_inches='tight')
     plt.clf()
+    print(f'{variable_parameter}:', '{:.2f} done'.format(variable_parameter_value))
 
 #Code for splitting figures up in single parts; PROBLEM: The color scale is all messed up from image to image because they are not identical (e.g: 0 is white and in the next image its red)
 """for alpha in alphas:

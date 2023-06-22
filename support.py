@@ -4,6 +4,8 @@ import os
 import gym
 import pandas as pd
 import datetime
+import time
+from IPython.display import clear_output
 
 
 
@@ -39,7 +41,7 @@ class QLAgent:
             action = np.random.choice(np.arange(self.n_actions), p=action_probabilities)
         return action
 
-    def train(self):
+    def train(self, log_reward_for_every_step=False, render=False):
         ''' Trains the Agent on the params given in the Class definition. Returns a list with the return for each episode
             as well as an array that contains the rewards for each episode and each step. The last column of the array is the return for this epsiode. 
             This is made for easy transformation to a pandas dataframe that should use column names in range n_steps and the last column name being 
@@ -58,7 +60,15 @@ class QLAgent:
 
                 action = self.choose_action_softmax(state)
                 next_state, reward, done,_ = self.env.step(action)
-                reward_list.append(reward)
+
+                if render:
+                    self.env.render()
+                    time.sleep(0.5)
+                    clear_output(wait=True)
+                
+                if log_reward_for_every_step:
+                    reward_list.append(reward)
+                    
                 Return += reward
                 self.update_Q(state,next_state,action,reward)
                 state = next_state
@@ -66,22 +76,27 @@ class QLAgent:
                 if done:
                     reward_list = reward_list + [None] * (self.max_steps - len(reward_list))
                     break
-                    
-            if arr.size == 0:
-                arr = np.append(arr, reward_list)
-            else: 
-                arr = np.vstack((arr, reward_list))
+
+            if log_reward_for_every_step:   
+                if arr.size == 0:
+                    arr = np.append(arr, reward_list)
+                else: 
+                    arr = np.vstack((arr, reward_list))
             
             return_list.append(Return)
             self.epsilon = max(self.epsilon_min, self.epsilon - self.epsilon * self.epsilon_decay_rate)
 
         return_array = np.array(return_list)
         return_array = return_array[:,np.newaxis]
-        arr  = np.hstack((arr, return_array))
+
+        if log_reward_for_every_step:
+            arr  = np.hstack((arr, return_array))
+        else: 
+            arr = None
 
         return return_list, arr
     
-    def evaluate(self, seed=None):
+    def evaluate(self, seed=None, render=False):
 
         if bool(seed):
             seed = self.env.seed(int(seed))
@@ -94,6 +109,10 @@ class QLAgent:
         for s in range(self.max_steps):
             action = np.argmax(self.Q[state])
             next_state, reward, done,_ = self.env.step(action)
+            if render:
+                self.env.render()
+                time.sleep(0.5)
+                clear_output(wait=True)
             Return += reward
             state = next_state
             if done:

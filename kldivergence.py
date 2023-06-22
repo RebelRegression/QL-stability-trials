@@ -8,7 +8,7 @@ from support import *
 
 
 
-training_folder = ('Run4-Taxiv3-alphas')
+training_folder = ('Run6-Taxiv3-alpha-n_50')
 config_dictionary = read_config_from_txt_file(f'{training_folder}/config.txt')
 
 
@@ -18,6 +18,10 @@ variable_parameter_list = config_dictionary.get(variable_parameter)
 
 try: 
     os.mkdir(f'{training_folder}/figures')
+except:
+    pass
+try: 
+    os.mkdir(f'{training_folder}/stat_data')
 except:
     pass
 try:
@@ -32,7 +36,7 @@ for variable_parameter_value in variable_parameter_list:
         Q_table = np.load(f'{training_folder}/agents_for_setting_{variable_parameter_value}/agent_Q-Table_{n_agent}.npy')
         action_probabilities_array = get_action_probabilities_as_array(Q_table)
         np.save(f'{training_folder}/agents_for_setting_{variable_parameter_value}/agent_action_probabilities_{n_agent}.npy', action_probabilities_array)
-    print(f'done for {variable_parameter_value}')
+    print('action probabilities calculeted for {:.2f}'.format(variable_parameter_value))
 
 #Berechnen der KL Divergenz von jedem Agenten pro Setting zu jedem anderen Agenten pro Setting 
 
@@ -59,12 +63,13 @@ for variable_parameter_value in variable_parameter_list:
 
         #speichert den Durchschnitt der KL-Divergenz zwischen zwei Agenten
         agents_kl_divergence = np.vstack((agents_kl_divergence, agent_x_kl_divergence_2_all_other_agents))
-             
+
+    np.save(f'{training_folder}/stat_data/kl-divergence_array_setting_{variable_parameter_value}.npy', agents_kl_divergence)      
     plt.imshow(agents_kl_divergence, cmap='hot', interpolation='nearest')
     plt.title(label=f'average KL-Divergence for {config_dictionary.get("variable_parameter")}: {variable_parameter_value}', pad=+10)
     plt.ylabel('Agent-Y')
     plt.xlabel('Agent-X')
     plt.colorbar(shrink=0.6, anchor=(0.0, 0.0))
-    plt.savefig(f'{training_folder}/figures/kl-divergence/entropy_heatmap_gamma{variable_parameter_value}.jpg', dpi=2000, bbox_inches='tight')
+    plt.savefig(f'{training_folder}/figures/kl-divergence/kl-divergence_heatmap_setting_{variable_parameter_value}.jpg', dpi=2000, bbox_inches='tight')
     plt.clf()
     print('Setting {:.2f} done'.format(variable_parameter_value))
